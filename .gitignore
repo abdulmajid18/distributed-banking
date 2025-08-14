@@ -90,4 +90,4 @@ docker-compose.override.yml
 *.swo
 
 ### Test files ###
-**/test-output/
+**/test-output/.idea/
