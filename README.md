@@ -15,4 +15,3 @@ A fault-tolerant, strongly consistent distributed banking system implementing:
 - Java 21
 - Maven
 - gRPC (for service communication)
-- [Add other technologies you'll use]
