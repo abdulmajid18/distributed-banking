@@ -1,0 +1,4 @@
+database:
+  url: test_url
+  username: test_user
+  password: test_pass
