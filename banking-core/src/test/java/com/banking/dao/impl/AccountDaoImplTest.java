@@ -42,10 +42,6 @@ class AccountDaoImplTest {
     @BeforeEach
     void setup() throws SQLException {
         dao = new AccountDaoImpl(connection);
-
-        try (Statement stmt = connection.createStatement()) {
-            stmt.execute("DELETE FROM accounts");
-        }
     }
 
     @AfterEach
@@ -57,7 +53,6 @@ class AccountDaoImplTest {
 
     @Test
     void save() throws SQLException {
-        AccountDao dao = new AccountDaoImpl(connection);
         Account account = new Account.Builder()
                 .accountId("A1")
                 .accountNumber("123")
