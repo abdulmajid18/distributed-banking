@@ -10,10 +10,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import java.sql.*;
+import java.time.Instant;
+import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -45,7 +47,24 @@ class AccountDaoImplUnitTest {
     }
 
     @Test
-    void findById() {
+    void findById(@Mock PreparedStatement mockStmt, @Mock ResultSet mockRs) throws SQLException {
+        when(mockConnection.prepareStatement(anyString())).thenReturn(mockStmt);
+        when(mockStmt.executeQuery()).thenReturn(mockRs);
+        when(mockRs.next()).thenReturn(true);
+        when(mockRs.getString("account_id")).thenReturn("A1");
+        when(mockRs.getString("number")).thenReturn("123");
+        when(mockRs.getTimestamp("created_at")).thenReturn(Timestamp.from(Instant.now()));
+        when(mockRs.getTimestamp("updated_at")).thenReturn(Timestamp.from(Instant.now()));
+
+        AccountDao dao = new AccountDaoImpl(mockConnection);
+        Optional<Account> accountOpt = dao.findById("A1");
+
+        assertTrue(accountOpt.isPresent());
+        assertEquals("A1", accountOpt.get().getAccountId());
+
+        verify(mockConnection).prepareStatement(anyString());
+        verify(mockStmt).setString(1, "A1");
+        verify(mockStmt).executeQuery();
     }
 
     @Test

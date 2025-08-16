@@ -79,8 +79,8 @@ public class AccountDaoImpl implements AccountDao {
                 .ownerId(rs.getString("owner_id"))
                 .balance(rs.getBigDecimal("balance"))
                 .currency(rs.getString("currency"))
-                .type(AccountType.valueOf(rs.getString("account_type")))
-                .status(AccountStatus.valueOf(rs.getString("status")))
+                .type(AccountType.safeValueOf(rs.getString("account_type")))
+                .status(AccountStatus.safeValueOf(rs.getString("status")))
                 .createdAt(rs.getTimestamp("created_at").toInstant())
                 .updatedAt(rs.getTimestamp("updated_at").toInstant())
                 .build();
