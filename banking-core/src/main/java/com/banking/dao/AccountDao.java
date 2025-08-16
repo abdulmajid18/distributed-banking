@@ -14,3 +14,9 @@ public interface AccountDao {
     void delete(String id);
     List<Account> findAll();
 }
+
+//doAnswer(invocation -> {
+//Account acc = invocation.getArgument(0);
+//    System.out.println("Saving account: " + acc.getAccountId());
+//        return null; // must return null for void methods
+//        }).when(accountDao).save(any(Account.class));
