@@ -29,9 +29,6 @@ class AccountServiceTest {
     @Mock
     private AccountDao accountDao;
 
-    @Mock
-    private Logger mockLogger;
-
     @InjectMocks
     private AccountServiceImpl accountService;
 
