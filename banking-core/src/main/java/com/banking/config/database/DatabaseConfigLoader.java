@@ -57,6 +57,7 @@ public class DatabaseConfigLoader {
     }
 
     public String getDatabaseUser() throws ConfigurationException {
+
         return Objects.requireNonNull(getDatabaseConfig().get("username"),
                 "Database username not found in configuration");
     }
