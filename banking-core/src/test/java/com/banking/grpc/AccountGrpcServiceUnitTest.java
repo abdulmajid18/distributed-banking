@@ -118,6 +118,7 @@ class AccountGrpcServiceUnitTest {
 
         Throwable actualError = errorCaptor.getValue();
         assertEquals(expectedException, actualError);
+        assertThat(actualError).hasMessageContaining("Service error");
 
         verify(responseObserver).onError(expectedException);
         verify(responseObserver, never()).onNext(any());
