@@ -10,6 +10,7 @@
     <packaging>pom</packaging>
     <modules>
         <module>banking-core</module>
+        <module>coordination</module>
     </modules>
 
     <properties>
