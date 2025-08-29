@@ -37,8 +37,6 @@ class AccountGrpcServiceIntegrationTest {
 
     private AccountDaoImpl accountDao;
 
-    private int port;
-
     private Server grpcServer;
 
     private ManagedChannel channel;
@@ -52,7 +50,7 @@ class AccountGrpcServiceIntegrationTest {
         accountDao = new AccountDaoImpl(connection);
         accountService = new AccountServiceImpl(accountDao);
 
-        port = findFreePort();
+        int port = findFreePort();
 
         setupGrpcServer(port);
 
