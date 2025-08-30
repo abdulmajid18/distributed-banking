@@ -1,6 +1,6 @@
-package com.banking.service.impl;
+package com.banking.registry.service.impl;
 
-import com.banking.service.ServiceRegistryClient;
+import com.banking.registry.service.ServiceRegistryClient;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
@@ -9,6 +9,10 @@ import org.apache.zookeeper.CreateMode;
 import java.util.List;
 
 public class CuratorZooKeeperClient implements ServiceRegistryClient, AutoCloseable {
+
+    public CuratorFramework getClient() {
+        return client;
+    }
 
     private final CuratorFramework client;
 

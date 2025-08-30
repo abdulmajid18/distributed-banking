@@ -1,4 +1,4 @@
-package com.banking.service;
+package com.banking.registry.service;
 
 import java.util.List;
 

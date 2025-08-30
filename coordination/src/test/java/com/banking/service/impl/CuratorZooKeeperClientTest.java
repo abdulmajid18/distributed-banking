@@ -1,5 +1,6 @@
 package com.banking.service.impl;
 
+import com.banking.registry.service.impl.CuratorZooKeeperClient;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
