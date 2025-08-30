@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  zookeeper:
+    image: zookeeper:latest
+    container_name: banking-zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOO_MY_ID: 1
+      ZOO_PORT: 2181
+      ZOO_TICK_TIME: 2000
+    volumes:
+      - zookeeper_data:/data
+      - zookeeper_datalog:/datalog
+    restart: unless-stopped
+
+volumes:
+  zookeeper_data:
+  zookeeper_datalog:

@@ -8,7 +8,7 @@ import org.apache.zookeeper.CreateMode;
 
 import java.util.List;
 
-public class CuratorZooKeeperClient implements ServiceRegistryClient {
+public class CuratorZooKeeperClient implements ServiceRegistryClient, AutoCloseable {
 
     private final CuratorFramework client;
 
