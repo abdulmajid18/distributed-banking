@@ -11,6 +11,7 @@
     <modules>
         <module>banking-core</module>
         <module>coordination</module>
+        <module>fault-tolerance</module>
     </modules>
 
     <properties>

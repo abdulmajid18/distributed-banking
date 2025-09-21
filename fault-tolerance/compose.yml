@@ -1,0 +1,52 @@
+services:
+  zookeeper:
+    image: zookeeper:3.9
+    container_name: banking-zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOO_MY_ID: 1
+      ZOO_SERVERS: server.1=0.0.0.0:2888:3888:participant;0.0.0.0:2181
+      ZOO_TICK_TIME: 4000
+      ZOO_INIT_LIMIT: 10
+      ZOO_SYNC_LIMIT: 5
+      ZOO_MAX_CLIENT_CNXNS: 60
+    volumes:
+      - zookeeper_data:/data
+      - zookeeper_datalog:/datalog
+    restart: unless-stopped
+    networks:
+      - banking-net
+
+  bookie1:
+    image: apache/bookkeeper:4.17.0
+    container_name: bookie1
+    environment:
+      BK_zkServers: zookeeper:2181
+      BK_metadataServiceUri: zk://zookeeper:2181/ledgers
+      BK_useHostNameAsBookieID: "false"
+      BK_bookieId: bookie1:3181
+      BK_advertisedAddress: "localhost"
+      # Force format on first run (remove after initial setup)
+    volumes:
+      - bk1-journal:/data/bookkeeper/journal
+      - bk1-ledgers:/data/bookkeeper/ledgers
+      - bk1-index:/data/bookkeeper/index
+    ports:
+      - "3181:3181"
+    restart: unless-stopped
+    depends_on:
+      - zookeeper
+    networks:
+      - banking-net
+
+volumes:
+  zookeeper_data:
+  zookeeper_datalog:
+  bk1-journal:
+  bk1-ledgers:
+  bk1-index:
+
+networks:
+  banking-net:
+    driver: bridge

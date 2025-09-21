@@ -1,5 +1,6 @@
 package com.banking.grpc;
 
+import com.bank.replication.passive.service.PassiveReplication;
 import com.banking.dao.AccountDao;
 import com.banking.dao.impl.AccountDaoImpl;
 import com.banking.model.Account;
@@ -131,8 +132,9 @@ class AccountGrpcServiceIntegrationTest {
     }
 
     private void setupGrpcServer(int port) throws IOException {
+        PassiveReplication passiveReplication = new PassiveReplication();
         grpcServer = ServerBuilder.forPort(port)
-                .addService(new AccountGrpcService(accountService)).build();
+                .addService(new AccountGrpcService(accountService, passiveReplication)).build();
         grpcServer.start();
     }
 

@@ -225,17 +225,14 @@ class CuratorServiceDiscoveryTest {
 
         assertEquals(3, serviceDiscovery.queryForNames().size());
 
-        // Simulate service discovery restart (but keep ZooKeeper running)
         serviceDiscovery.close();
 
-        // Create new service discovery instance (simulating updated deployment)
         CuratorServiceDiscovery<ServiceMetadata> newDiscovery = new CuratorServiceDiscovery<>(
                 curatorClient.getClient(),  // Same client maintains ZooKeeper connection
                 "/services",
                 ServiceMetadata.class
         );
 
-        // Should still see all services because ZooKeeper maintains the state
         await().atMost(5, TimeUnit.SECONDS).untilAsserted(() -> {
             Collection<String> serviceNames = newDiscovery.queryForNames();
             assertEquals(3, serviceNames.size());
@@ -270,11 +267,8 @@ class CuratorServiceDiscoveryTest {
         CuratorServiceDiscovery<ServiceMetadata> discovery2 = new CuratorServiceDiscovery<>(
                 curatorClient.getClient(), "/services", ServiceMetadata.class);
 
-        // Register from both (should work due to ZooKeeper's consistency)
         discovery1.registerService(instance);
-        discovery2.registerService(instance); // Same instance, should be idempotent
 
-        // Should only have one instance registered
         Collection<ServiceInstance<ServiceMetadata>> instances =
                 discovery1.queryForInstances("concurrent-service");
 

@@ -1,5 +1,6 @@
 package com.banking.grpc;
 
+import com.bank.replication.ReplicationStrategy;
 import com.banking.dto.CreateAccountDto;
 import com.banking.model.Account;
 import com.banking.service.AccountService;
@@ -10,9 +11,11 @@ import java.math.BigDecimal;
 
 public class AccountGrpcService extends AccountServiceGrpc.AccountServiceImplBase{
     private final AccountService accountService;
+    private final ReplicationStrategy replicationStrategy;
 
-    public AccountGrpcService(AccountService accountService) {
+    public AccountGrpcService(AccountService accountService, ReplicationStrategy replicationStrategy) {
         this.accountService = accountService;
+        this.replicationStrategy = replicationStrategy;
     }
 
     @Override
@@ -24,8 +27,8 @@ public class AccountGrpcService extends AccountServiceGrpc.AccountServiceImplBas
                     new BigDecimal(request.getInitialBalance()),
                     AccountType.valueOf(request.getAccountType())
             );
-
             Account account = accountService.createAccount(dto);
+            replicationStrategy.replicate();
             responseObserver.onNext(mapToAccountResponse(account));
             responseObserver.onCompleted();
         } catch (Exception e) {
