@@ -1,52 +1,132 @@
+networks:
+  pulsar:
+    driver: bridge
+
 services:
+  # Zookeeper for coordination
   zookeeper:
-    image: zookeeper:3.9
-    container_name: banking-zookeeper
-    ports:
-      - "2181:2181"
-    environment:
-      ZOO_MY_ID: 1
-      ZOO_SERVERS: server.1=0.0.0.0:2888:3888:participant;0.0.0.0:2181
-      ZOO_TICK_TIME: 4000
-      ZOO_INIT_LIMIT: 10
-      ZOO_SYNC_LIMIT: 5
-      ZOO_MAX_CLIENT_CNXNS: 60
-    volumes:
-      - zookeeper_data:/data
-      - zookeeper_datalog:/datalog
+    image: apachepulsar/pulsar
+    container_name: pulsar-zookeeper
     restart: unless-stopped
     networks:
-      - banking-net
-
-  bookie1:
-    image: apache/bookkeeper:4.17.0
-    container_name: bookie1
-    environment:
-      BK_zkServers: zookeeper:2181
-      BK_metadataServiceUri: zk://zookeeper:2181/ledgers
-      BK_useHostNameAsBookieID: "false"
-      BK_bookieId: bookie1:3181
-      BK_advertisedAddress: "localhost"
-      # Force format on first run (remove after initial setup)
+      - pulsar
     volumes:
-      - bk1-journal:/data/bookkeeper/journal
-      - bk1-ledgers:/data/bookkeeper/ledgers
-      - bk1-index:/data/bookkeeper/index
-    ports:
-      - "3181:3181"
+      - ./data/zookeeper:/pulsar/data/zookeeper
+    environment:
+      - metadataStoreUrl=zk:zookeeper:2181
+      - PULSAR_MEM=-Xms256m -Xmx256m -XX:MaxDirectMemorySize=256m
+    command:
+      - bash
+      - -c
+      - |
+        mkdir -p /pulsar/data/zookeeper && \
+        bin/apply-config-from-env.py conf/zookeeper.conf && \
+        bin/generate-zookeeper-config.sh conf/zookeeper.conf && \
+        exec bin/pulsar zookeeper
+    healthcheck:
+      test: ["CMD", "bin/pulsar-zookeeper-ruok.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  # Initialize cluster metadata
+  pulsar-init:
+    container_name: pulsar-init
+    hostname: pulsar-init
+    image: apachepulsar/pulsar
+    networks:
+      - pulsar
+    command:
+      - bash
+      - -c
+      - |
+        until bin/pulsar initialize-cluster-metadata \
+          --cluster cluster-a \
+          --zookeeper zookeeper:2181 \
+          --configuration-store zookeeper:2181 \
+          --web-service-url http://broker:8080 \
+          --broker-service-url pulsar://broker:6650; do
+          echo "Waiting for Zookeeper to be ready...";
+          sleep 5;
+        done
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+
+  # BookKeeper for persistent storage
+  bookie:
+    image: apachepulsar/pulsar
+    container_name: pulsar-bookie
     restart: unless-stopped
+    networks:
+      - pulsar
+    environment:
+      - clusterName=cluster-a
+      - zkServers=zookeeper:2181
+      - metadataServiceUri=metadata-store:zk:zookeeper:2181
+      - advertisedAddress=bookie
+      - BOOKIE_MEM=-Xms512m -Xmx512m -XX:MaxDirectMemorySize=256m
     depends_on:
       - zookeeper
+      - pulsar-init
+    volumes:
+      - ./data/bookkeeper/journal:/pulsar/data/bookkeeper/journal
+      - ./data/bookkeeper/ledgers:/pulsar/data/bookkeeper/ledgers
+    command:
+      - bash
+      - -c
+      - |
+        mkdir -p /pulsar/data/bookkeeper/{journal,ledgers} && \
+        until bin/apply-config-from-env.py conf/bookkeeper.conf && exec bin/pulsar bookie; do
+          echo "Bookie failed to start. Retrying in 5 seconds...";
+          sleep 5;
+        done
+
+  # Pulsar Broker
+  broker:
+    image: apachepulsar/pulsar
+    container_name: pulsar-broker
+    hostname: broker
+    restart: unless-stopped
     networks:
-      - banking-net
+      - pulsar
+    environment:
+      - metadataStoreUrl=zk:zookeeper:2181
+      - zookeeperServers=zookeeper:2181
+      - clusterName=cluster-a
+      - managedLedgerDefaultEnsembleSize=1
+      - managedLedgerDefaultWriteQuorum=1
+      - managedLedgerDefaultAckQuorum=1
+      - advertisedAddress=broker
+      - advertisedListeners=external:pulsar://127.0.0.1:6650
+      - PULSAR_MEM=-Xms512m -Xmx512m -XX:MaxDirectMemorySize=256m
+    depends_on:
+      - zookeeper
+      - bookie
+    ports:
+      - "6650:6650"  # Broker service port
+      - "8080:8080"  # Admin API port
+    volumes:
+      - ./data/broker:/pulsar/data
+    command:
+      - bash
+      - -c
+      - |
+        mkdir -p /pulsar/data && \
+        until bin/apply-config-from-env.py conf/broker.conf && exec bin/pulsar broker; do
+          echo "Broker failed to start. Retrying in 5 seconds...";
+          sleep 5;
+        done
 
-volumes:
-  zookeeper_data:
-  zookeeper_datalog:
-  bk1-journal:
-  bk1-ledgers:
-  bk1-index:
-
-networks:
-  banking-net:
-    driver: bridge
+  # Pulsar Manager (Web UI)
+  pulsar-manager:
+    image: apachepulsar/pulsar-manager
+    container_name: pulsar-manager
+    environment:
+      - SPRING_CONFIGURATION_FILE=/pulsar-manager/pulsar-manager/application.properties
+    ports:
+      - "9527:9527"
+    depends_on:
+      - broker
+    networks:
+      - pulsar
