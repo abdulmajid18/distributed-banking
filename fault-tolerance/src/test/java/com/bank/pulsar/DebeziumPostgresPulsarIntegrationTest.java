@@ -93,14 +93,20 @@ class DebeziumPostgresPulsarIntegrationTest {
                 postgres.getUsername(),
                 postgres.getPassword())) {
 
+            // Set autoCommit to false for this specific operation
             conn.setAutoCommit(false);
 
             try (Statement stmt = conn.createStatement()) {
                 stmt.execute("CREATE PUBLICATION debezium_pub FOR ALL TABLES;");
+                conn.commit();
                 System.out.println("Publication created successfully");
+            } catch (Exception e) {
+                conn.rollback();
+                System.out.println("Publication might already exist: " + e.getMessage());
+            } finally {
+                // Reset to default autoCommit behavior
+                conn.setAutoCommit(true);
             }
-        } catch (Exception e) {
-            System.out.println("Publication might already exist: " + e.getMessage());
         }
     }
 
@@ -120,31 +126,28 @@ class DebeziumPostgresPulsarIntegrationTest {
         }
     }
 
-
-
-
     private static void deployDebeziumConnector() throws Exception {
         System.out.println("Deploying Debezium PostgreSQL connector...");
 
         // Create YAML configuration file following official documentation
         String connectorConfigYaml = """
-            tenant: "public"
-            namespace: "default"
-            name: "debezium-postgres-source"
-            topicName: "debezium-postgres-topic"
-            archive: "/tmp/connectors/pulsar-io-debezium-postgres-4.1.1.nar"
-            parallelism: 1
-
-            configs:
-              database.hostname: "postgres"
-              database.port: "5432"
-              database.user: "testuser"
-              database.password: "testpass"
-              database.dbname: "testdb"
-              database.server.name: "dbserver1"
-              schema.whitelist: "public"
-              pulsar.service.url: "pulsar://pulsar:6650"
-            """;
+                tenant: "public"
+                namespace: "default"
+                name: "debezium-postgres-source"
+                topicName: "debezium-postgres-topic"
+                archive: "/tmp/connectors/pulsar-io-debezium-postgres-4.1.1.nar"
+                parallelism: 1
+                
+                configs:
+                  database.hostname: "postgres"
+                  database.port: "5432"
+                  database.user: "testuser"
+                  database.password: "testpass"
+                  database.dbname: "testdb"
+                  database.server.name: "dbserver1"
+                  schema.whitelist: "public"
+                  pulsar.service.url: "pulsar://pulsar:6650"
+                """;
 
         pulsar.execInContainer("bash", "-c", "mkdir -p /tmp/connectors");
 
@@ -187,7 +190,7 @@ class DebeziumPostgresPulsarIntegrationTest {
                             "name VARCHAR(255) NOT NULL, " +
                             "quantity INT DEFAULT 0);"
             );
-            postgresConnection.commit();
+            // No need to commit when autoCommit is true (default)
         }
 
         System.out.println("Table created, waiting for connector to detect schema...");
@@ -199,7 +202,7 @@ class DebeziumPostgresPulsarIntegrationTest {
                     "INSERT INTO public.inventory (name, quantity) " +
                             "VALUES ('widget', 100);"
             );
-            postgresConnection.commit();
+            // No need to commit when autoCommit is true (default)
         }
 
         System.out.println("Data inserted, waiting to consume from Pulsar...");
@@ -247,7 +250,7 @@ class DebeziumPostgresPulsarIntegrationTest {
                             "name VARCHAR(255) NOT NULL, " +
                             "price DECIMAL(10, 2));"
             );
-            postgresConnection.commit();
+            // No need to commit when autoCommit is true (default)
         }
 
         Thread.sleep(15000);
@@ -258,13 +261,12 @@ class DebeziumPostgresPulsarIntegrationTest {
             stmt.execute("INSERT INTO public.products (name, price) VALUES ('Product2', 20.75);");
             stmt.execute("UPDATE public.products SET price = 15.00 WHERE name = 'Product1';");
             stmt.execute("DELETE FROM public.products WHERE name = 'Product2';");
-            postgresConnection.commit();
         }
 
         System.out.println("Multiple operations executed, waiting for events...");
         Thread.sleep(10000);
 
-        String topic = "persistent://public/default/dbserver1.public.products";
+        String topic = "persistent://public/default/debezium-postgres-topic";
 
         try (Consumer<byte[]> consumer = pulsarClient.newConsumer()
                 .topic(topic)
@@ -282,7 +284,7 @@ class DebeziumPostgresPulsarIntegrationTest {
                 consumer.acknowledge(message);
                 eventCount++;
             }
-
+            System.out.println("Messageeeeeeeeeeeeeeeeeeeeeeeeeeeee   " + message);
             assertThat(eventCount)
                     .as("Should receive CDC events for all operations")
                     .isBetween(1, 10);
@@ -314,4 +316,25 @@ class DebeziumPostgresPulsarIntegrationTest {
                 .as("Connector should be running")
                 .contains("\"running\"");
     }
+
+    @Test
+    void testDiscoverTopics() throws Exception {
+        // List all topics to see what's available
+        Container.ExecResult result = pulsar.execInContainer(
+                "bin/pulsar-admin", "topics", "list", "public/default"
+        );
+
+        System.out.println("Available topics: " + result.getStdout());
+
+        // Also check the connector's actual output topic
+        Container.ExecResult connectorStatus = pulsar.execInContainer(
+                "bin/pulsar-admin", "sources", "status",
+                "--name", "debezium-postgres-source",
+                "--tenant", "public",
+                "--namespace", "default"
+        );
+
+        System.out.println("Connector status with topic info: " + connectorStatus.getStdout());
+    }
+
 }
