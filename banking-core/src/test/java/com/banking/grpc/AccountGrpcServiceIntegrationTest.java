@@ -1,8 +1,10 @@
 package com.banking.grpc;
 
-import com.bank.replication.passive.service.PassiveReplication;
-import com.banking.dao.AccountDao;
+import com.bank.pulsar.LoadConfig;
+import com.bank.pulsar.PulsarService;
 import com.banking.dao.impl.AccountDaoImpl;
+import com.banking.events.dao.AccountCreationEventDao;
+import com.banking.events.dao.impl.AccountCreationEventDaoImpl;
 import com.banking.model.Account;
 import com.banking.model.AccountStatus;
 import com.banking.model.AccountType;
@@ -38,6 +40,8 @@ class AccountGrpcServiceIntegrationTest {
 
     private AccountDaoImpl accountDao;
 
+    private AccountCreationEventDao accountCreationEventDao;
+
     private Server grpcServer;
 
     private ManagedChannel channel;
@@ -49,7 +53,8 @@ class AccountGrpcServiceIntegrationTest {
         setupDatabase();
 
         accountDao = new AccountDaoImpl(connection);
-        accountService = new AccountServiceImpl(accountDao);
+        accountCreationEventDao = new AccountCreationEventDaoImpl(connection);
+        accountService = new AccountServiceImpl(accountDao, accountCreationEventDao);
 
         int port = findFreePort();
 
@@ -132,9 +137,10 @@ class AccountGrpcServiceIntegrationTest {
     }
 
     private void setupGrpcServer(int port) throws IOException {
-        PassiveReplication passiveReplication = new PassiveReplication();
+        LoadConfig config = new LoadConfig();
+        PulsarService pulsarService = new PulsarService(config);
         grpcServer = ServerBuilder.forPort(port)
-                .addService(new AccountGrpcService(accountService, passiveReplication)).build();
+                .addService(new AccountGrpcService(accountService)).build();
         grpcServer.start();
     }
 

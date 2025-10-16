@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 
 import java.math.BigDecimal;
 import java.sql.SQLException;
+import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
@@ -42,11 +43,15 @@ class AccountServiceTest {
 
     @BeforeEach
     void setUp() {
+        Instant fixedTimestamp = Instant.parse("2023-10-01T10:00:00Z");
+
         validAccountDto = new CreateAccountDto(
                 OWNER_ID,
                 CURRENCY,
                 INITIAL_BALANCE,
-                AccountType.SAVINGS
+                AccountType.SAVINGS,
+                fixedTimestamp,  // Add createdAt
+                fixedTimestamp   // Add updatedAt
         );
     }
 

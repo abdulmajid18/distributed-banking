@@ -1,22 +1,18 @@
-version: '3.9'
-
 services:
   postgres:
-    image: postgres
+    image: debezium/postgres
     container_name: banking-postgres
+    restart: always
     environment:
       POSTGRES_DB: ${SQL_DATABASE:-banking_db}
       POSTGRES_USER: ${SQL_USER:-postgres}
       POSTGRES_PASSWORD: ${SQL_PASSWORD:-postgres}
+      TZ: UTC
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${SQL_USER:-postgres} -d ${SQL_DATABASE:-notifications}" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - ./docker/init:/docker-entrypoint-initdb.d
     networks:
       - banking_network
 

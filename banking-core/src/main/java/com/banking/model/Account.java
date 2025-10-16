@@ -103,7 +103,14 @@ public final class Account {
     /**
      * Factory method for account creation (Domain Logic)
      */
-    public static Account create(String ownerId, String currency, AccountType accountType, BigDecimal initialBalance) {
+
+    public static Account create(String ownerId, String currency, AccountType accountType,
+                                 BigDecimal initialBalance) {
+        return create(ownerId, currency, accountType, initialBalance, Instant.now(), Instant.now());
+    }
+
+    public static Account create(String ownerId, String currency, AccountType accountType,
+                                 BigDecimal initialBalance, Instant createdAt, Instant updatedAt) {
         return new Builder()
                 .accountId(java.util.UUID.randomUUID().toString())
                 .accountNumber(generateAccountNumber())
@@ -112,8 +119,8 @@ public final class Account {
                 .type(accountType)
                 .status(AccountStatus.ACTIVE)
                 .balance(initialBalance)
-                .createdAt(Instant.now())
-                .updatedAt(Instant.now())
+                .createdAt(createdAt)
+                .updatedAt(updatedAt)
                 .build();
     }
 

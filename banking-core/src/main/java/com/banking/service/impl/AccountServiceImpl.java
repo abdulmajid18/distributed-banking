@@ -3,6 +3,8 @@ package com.banking.service.impl;
 import com.banking.dao.AccountDao;
 import com.banking.dao.exception.AccountCreationException;
 import com.banking.dto.CreateAccountDto;
+import com.banking.events.dao.AccountCreationEventDao;
+import com.banking.events.model.AccountCreationEvent;
 import com.banking.model.Account;
 import com.banking.service.AccountService;
 
@@ -15,10 +17,13 @@ import org.slf4j.LoggerFactory;
 public class AccountServiceImpl implements AccountService {
     private final AccountDao accountDao;
 
+    private final AccountCreationEventDao accountCreationEventDao;
+
     private static final Logger logger = LoggerFactory.getLogger(AccountServiceImpl.class);
 
-    public AccountServiceImpl(AccountDao accountDao) {
+    public AccountServiceImpl(AccountDao accountDao, AccountCreationEventDao accountCreationEventDao) {
         this.accountDao = accountDao;
+        this.accountCreationEventDao = accountCreationEventDao;
     }
 
     @Override
@@ -29,11 +34,28 @@ public class AccountServiceImpl implements AccountService {
                     createAccountDto.ownerId(),
                     createAccountDto.currency(),
                     createAccountDto.accountType(),
-                    createAccountDto.initialBalance()
+                    createAccountDto.initialBalance(),
+                    createAccountDto.createdAt(),
+                    createAccountDto.updatedAt()
             );
             logger.debug("Created account object: {}", newAccount);
             accountDao.save(newAccount);
             logger.info("Successfully created account with ID: {}", newAccount.getAccountId());
+
+            AccountCreationEvent event = new AccountCreationEvent(
+                    /* commandId = */ "CMD-" + newAccount.getAccountId(),
+                    /* source = */ "AccountService",
+                    /* business data */
+                    newAccount.getOwnerId(),
+                    newAccount.getCurrency(),
+                    newAccount.getBalance(),
+                    newAccount.getAccountType(),
+                    newAccount.getCreatedAt(),
+                    newAccount.getUpdatedAt()
+            );
+
+            accountCreationEventDao.save(event);
+            logger.info("Saved AccountCreationEvent for account ID: {}", newAccount.getAccountId());
             return newAccount;
 
         } catch (SQLException e) {

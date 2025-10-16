@@ -16,6 +16,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.Instant;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
@@ -51,7 +52,7 @@ class AccountServiceImplTest {
 
     @BeforeEach
     void setup() throws SQLException {
-        accountService = new AccountServiceImpl(dao);
+        accountService = new AccountServiceImpl(dao, null);
     }
 
     @AfterEach
@@ -67,7 +68,9 @@ class AccountServiceImplTest {
                 "user123",
                 "USD",
                 new BigDecimal("5.00"),
-                AccountType.SAVINGS
+                AccountType.SAVINGS,
+                Instant.now(),
+                Instant.now()
         );
         Account createdAccount = accountService.createAccount(dto);
 

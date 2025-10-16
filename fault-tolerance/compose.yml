@@ -2,8 +2,14 @@ networks:
   pulsar:
     driver: bridge
 
+  banking_network:
+    external: true
+
+
 services:
+  # ================================
   # Zookeeper for coordination
+  # ================================
   zookeeper:
     image: apachepulsar/pulsar
     container_name: pulsar-zookeeper
@@ -29,11 +35,13 @@ services:
       timeout: 5s
       retries: 30
 
+  # ================================
   # Initialize cluster metadata
+  # ================================
   pulsar-init:
+    image: apachepulsar/pulsar
     container_name: pulsar-init
     hostname: pulsar-init
-    image: apachepulsar/pulsar
     networks:
       - pulsar
     command:
@@ -53,7 +61,9 @@ services:
       zookeeper:
         condition: service_healthy
 
+  # ================================
   # BookKeeper for persistent storage
+  # ================================
   bookie:
     image: apachepulsar/pulsar
     container_name: pulsar-bookie
@@ -82,7 +92,9 @@ services:
           sleep 5;
         done
 
+  # ================================
   # Pulsar Broker
+  # ================================
   broker:
     image: apachepulsar/pulsar
     container_name: pulsar-broker
@@ -90,6 +102,7 @@ services:
     restart: unless-stopped
     networks:
       - pulsar
+      - banking_network
     environment:
       - metadataStoreUrl=zk:zookeeper:2181
       - zookeeperServers=zookeeper:2181
@@ -100,14 +113,21 @@ services:
       - advertisedAddress=broker
       - advertisedListeners=external:pulsar://127.0.0.1:6650
       - PULSAR_MEM=-Xms512m -Xmx512m -XX:MaxDirectMemorySize=256m
+      - functionsWorkerEnabled=true
+      - PF_pulsarFunctionsCluster=cluster-a
+      - PF_pulsarServiceUrl=pulsar://broker:6650
+      - PF_pulsarWebServiceUrl=http://broker:8080
     depends_on:
       - zookeeper
       - bookie
     ports:
-      - "6650:6650"  # Broker service port
-      - "8080:8080"  # Admin API port
+      - "6650:6650"  # Pulsar binary protocol
+      - "8080:8080"  # Pulsar admin REST API
     volumes:
       - ./data/broker:/pulsar/data
+      # 👇 Mount Debezium PostgreSQL connector NAR if you downloaded it
+      - ./connectors/pulsar-io-debezium-postgres-4.1.1.nar:/pulsar/connectors/pulsar-io-debezium-postgres-4.1.1.nar
+      - ./debezium-postgres-source-config.yaml:/pulsar/conf/debezium-postgres-source-config.yaml
     command:
       - bash
       - -c
@@ -118,7 +138,9 @@ services:
           sleep 5;
         done
 
+  # ================================
   # Pulsar Manager (Web UI)
+  # ================================
   pulsar-manager:
     image: apachepulsar/pulsar-manager
     container_name: pulsar-manager

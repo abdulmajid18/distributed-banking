@@ -1,0 +1,10 @@
+package com.banking.events;
+
+public enum EventType {
+    ACCOUNT_CREATED,
+    ACCOUNT_DEBITED,
+    ACCOUNT_CREDITED,
+    ACCOUNT_HOLD_PLACED,
+    ACCOUNT_HOLD_RELEASED,
+    ACCOUNT_STATUS_CHANGED
+}

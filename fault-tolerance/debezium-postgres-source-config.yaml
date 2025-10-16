@@ -1,0 +1,20 @@
+tenant: "${PULSAR_TENANT:-public}"
+namespace: "${PULSAR_NAMESPACE:-default}"
+name: "${PULSAR_SOURCE_NAME:-debezium-postgres-source}"
+topicName: "${PULSAR_DEBEZIUM_TOPIC:-debezium-postgres-topic}"
+archive: "${PULSAR_CONNECTOR_ARCHIVE:-connectors/pulsar-io-debezium-postgres-4.1.1.nar}"
+parallelism: ${PULSAR_SOURCE_PARALLELISM:-1}
+
+configs:
+  # --- PostgreSQL connection (from your env vars) ---
+  database.hostname: "${POSTGRES_HOST:-banking-postgres}"
+  database.port: "${POSTGRES_PORT:-5432}"
+  database.user: "${SQL_USER:-postgres}"
+  database.password: "${SQL_PASSWORD:-postgres}"
+  database.dbname: "${SQL_DATABASE:-banking_db}"
+  database.server.name: "${DB_SERVER_NAME:-dbserver1}"
+  schema.whitelist: "${DB_SCHEMA:-public}"
+  plugin.name: "${PG_PLUGIN_NAME:-pgoutput}"
+
+  # --- Pulsar connection ---
+  pulsar.service.url: "${PULSAR_SERVICE_URL:-pulsar://broker:6650}"
